@@ -1,0 +1,113 @@
+
+<html>
+  <head>
+    <style>
+      #results {
+        position: fixed;
+        top: 50px;
+        left: 10px;
+        color: white;
+      }
+
+      #results span {
+        margin: 5px 5px;
+      }
+
+      video {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 600px;
+        height: 440px;
+      }
+
+      h1 {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+      }
+
+      button {
+        position: fixed;
+        top: 0;
+        left: 0;
+      }
+
+      /* Loader style */
+      #loader {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 24px;
+        color: white;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 10px 20px;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loader">Loading model, please wait...</div>
+
+    <video autoplay="true" id="videoElement" width="300" height="225"></video>
+    <button id="vision_button">Analyze</button>
+    <div id="results"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0"></script>
+
+    <script>
+      // Access camera
+      const video = document.querySelector("#videoElement");
+      const results = document.querySelector("#results");
+      const loader = document.getElementById("loader");
+
+      if (navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then(function (stream) {
+            video.srcObject = stream;
+          })
+          .catch(function (err) {
+            console.log("Something went wrong!");
+          });
+      }
+
+      let model;
+      mobilenet.load().then(loadedModel => {
+        model = loadedModel;
+        console.log("Model loaded.");
+        loader.style.display = "none";  
+      });
+
+      document.querySelector("#vision_button").addEventListener("click", async () => {
+        if (!model) {
+          alert("Model not loaded");
+          return;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const data = await model.classify(canvas);
+        console.log("Predictions:", data);
+
+        results.innerHTML = "";
+
+        data.forEach(prediction => {
+          let description = document.createElement("span");
+          let percent = document.createElement("span");
+
+          let div = document.createElement("div");
+          description.innerText = prediction.className;
+          percent.innerText = ` - ${(prediction.probability * 100).toFixed(2)}%`;
+
+          div.append(description, percent);
+          results.append(div);
+        });
+      });
+    </script>
+  </body>
+</html>
